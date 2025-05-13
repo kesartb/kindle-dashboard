@@ -2,228 +2,130 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard Entrada</title>
+  <title>Clima Albacete - Kindle</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: sans-serif;
-      background: #f4f4f4;
-      color: #222;
-      margin: 0;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      margin: 20px;
+      background: #fff;
+      color: #000;
     }
-    h1, h2 {
-      margin-top: 0;
+
+    h1 {
+      font-size: 18px;
+      margin-bottom: 20px;
     }
-    #weather {
-      font-size: 1.2em;
-      margin-bottom: 30px;
-    }
-    #chart-container {
+
+    table {
       width: 100%;
-      max-width: 700px;
-      margin-bottom: 40px;
+      border-collapse: collapse;
+      margin-top: 10px;
     }
-    #news {
-      max-width: 600px;
+
+    th, td {
+      padding: 5px;
+      text-align: right;
+      border-bottom: 1px solid #ccc;
     }
-    .news-item {
-      margin-bottom: 15px;
+
+    th:first-child, td:first-child {
+      text-align: left;
     }
-    a {
-      text-decoration: none;
-      color: #003366;
+
+    tr.highlight-now {
+      background-color: #e0f7fa;
+      font-weight: bold;
+    }
+
+    tr.heavy-rain {
+      background-color: #ffcdd2;
+    }
+
+    tr.highlight-now.heavy-rain {
+      border: 2px solid #b71c1c;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 <body>
-  <h1 id="greeting">Cargando saludo...</h1>
-  <div id="weather">Cargando el tiempo...</div>
-  <div id="chart-container">
-    <canvas id="tempChart"></canvas>
-  </div>
-  <h2>📰 Últimas noticias</h2>
-  <div id="news">Cargando noticias...</div>
+  <h1 id="dashboard-title">Buenos días – [fecha]</h1>
+  <div id="weather-table">Cargando el tiempo…</div>
 
   <script>
-    const greetingEl = document.getElementById("greeting");
-    const hour = new Date().getHours();
-    const today = new Date();
+    const titleElement = document.getElementById('dashboard-title');
+    const now = new Date();
+    const hour = now.getHours();
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-    const daysOfWeek = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-    const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    const dayOfWeek = daysOfWeek[today.getDay()];
-    const day = today.getDate();
-    const month = months[today.getMonth()];
-    const year = today.getFullYear();
-    const dateStr = `${dayOfWeek}, ${day} de ${month} de ${year}`;
+    let greeting = 'Buenos días';
+    if (hour >= 12 && hour < 20) greeting = 'Buenas tardes';
+    else if (hour >= 20 || hour < 6) greeting = 'Buenas noches';
 
-    let greeting = "¡Hola!";
-    if (hour >= 6 && hour < 12) {
-      greeting = "Buenos días 👋";
-    } else if (hour >= 12 && hour < 20) {
-      greeting = "Buenas tardes 👋";
-    } else {
-      greeting = "Buenas noches 🌙";
-    }
+    const dateStr = `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+    titleElement.textContent = `${greeting} – ${dateStr}`;
 
-    greetingEl.innerHTML = `${greeting} | ${dateStr}`;
-
-    Chart.register(ChartDataLabels);
-
-    const latitude = 38.9943;
-    const longitude = -1.8585;
-
-    function updateWeather() {
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,precipitation_probability,precipitation&timezone=Europe/Madrid`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.hourly) {
-            const hourlyData = data.hourly;
-            const temps = hourlyData.temperature_2m;
-            const times = hourlyData.time;
-            const rainProbs = hourlyData.precipitation_probability;
-            const rainValues = hourlyData.precipitation;
-
-            const now = new Date();
-            const currentHour = now.getHours();
-
-            const labels = [];
-            const tempValues = [];
-            const rainProbValues = [];
-            const rainAmountValues = [];
-
-            for (let i = 0; i < times.length; i++) {
-              const time = new Date(times[i]);
-              if (time.getDate() !== now.getDate()) continue;
-
-              const hour = time.getHours();
-              if (hour < 8 || hour > 22) continue;
-
-              labels.push(`${hour}:00`);
-              tempValues.push(temps[i]);
-              rainProbValues.push(rainProbs[i]);
-              rainAmountValues.push(rainValues[i] || 0);
-            }
-
-            const currentTempIndex = times.findIndex(t => new Date(t).getHours() === currentHour);
-            const currentTemp = temps[currentTempIndex] ?? temps[0];
-            document.getElementById("weather").innerHTML = `🌡️ <strong>${currentTemp}°C</strong> ahora`;
-
-            const ctx = document.getElementById("tempChart").getContext("2d");
-            new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels: labels,
-                datasets: [
-                  {
-                    type: 'line',
-                    label: 'Temperatura (°C)',
-                    data: tempValues,
-                    borderColor: '#0074D9',
-                    backgroundColor: 'rgba(0, 116, 217, 0.1)',
-                    yAxisID: 'y',
-                    tension: 0.3,
-                    pointRadius: 4,
-                    fill: true,
-                    datalabels: {
-                      display: false
-                    }
-                  },
-                  {
-                    type: 'bar',
-                    label: 'Prob. lluvia (%)',
-                    data: rainProbValues,
-                    backgroundColor: (ctx) => {
-                      return ctx.dataIndex === labels.findIndex(l => parseInt(l) === currentHour)
-                        ? 'rgba(30, 144, 255, 0.9)'
-                        : 'rgba(30, 144, 255, 0.6)';
-                    },
-                    yAxisID: 'y1',
-                    datalabels: {
-                      display: true,
-                      formatter: (value, context) => {
-                        const rainAmount = rainAmountValues[context.dataIndex];
-                        return rainAmount > 0 ? `${rainAmount.toFixed(1)} mm` : '';
-                      },
-                      color: '#ff0000',
-                      font: {
-                        weight: 'bold',
-                        size: 12
-                      }
-                    }
-                  }
-                ]
-              },
-              options: {
-                responsive: true,
-                plugins: {
-                  tooltip: {
-                    mode: 'index',
-                    intersect: false
-                  }
-                },
-                scales: {
-                  x: {
-                    title: {
-                      display: true,
-                      text: 'Hora del día'
-                    }
-                  },
-                  y: {
-                    type: 'linear',
-                    position: 'left',
-                    title: {
-                      display: true,
-                      text: 'Temperatura (°C)'
-                    }
-                  },
-                  y1: {
-                    type: 'linear',
-                    position: 'right',
-                    title: {
-                      display: true,
-                      text: 'Probabilidad de lluvia (%)'
-                    },
-                    min: 0,
-                    max: 100,
-                    grid: {
-                      drawOnChartArea: false
-                    }
-                  }
-                }
-              }
-            });
-          } else {
-            document.getElementById("weather").innerText = "No se pudo obtener el clima.";
-          }
-        })
-        .catch(err => {
-          document.getElementById("weather").innerText = "No se pudo obtener el clima.";
-        });
-    }
-
-    updateWeather();
-    setInterval(updateWeather, 30 * 60 * 1000); // cada 30 minutos
-
-    const rssUrl = 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/ultimas-noticias/portada';
-
-    fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`)
-      .then(res => res.json())
+    // Obtener datos del tiempo
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=38.9943&longitude=-1.8585&hourly=temperature_2m,precipitation_probability,precipitation&timezone=auto')
+      .then(response => {
+        if (!response.ok) throw new Error('Error en la respuesta');
+        return response.json();
+      })
       .then(data => {
-        const newsDiv = document.getElementById("news");
-        newsDiv.innerHTML = "";
-        data.items.slice(0, 5).forEach(item => {
-          const div = document.createElement("div");
-          div.className = "news-item";
-          div.innerHTML = `<strong><a href="${item.link}" target="_blank">${item.title}</a></strong><br><small>${new Date(item.pubDate).toLocaleString()}</small>`;
-          newsDiv.appendChild(div);
-        });
+        const { time, temperature_2m, precipitation_probability, precipitation } = data.hourly;
+        const currentHour = now.getHours();
+        const todayStr = now.toISOString().split('T')[0];
+        const items = [];
+
+        for (let i = 0; i < time.length; i++) {
+          const [dateStr, hourStr] = time[i].split('T');
+          const hour = parseInt(hourStr.split(':')[0], 10);
+          if (dateStr === todayStr && hour >= 8 && hour <= 22) {
+            items.push({
+              hour,
+              temp: temperature_2m[i],
+              prob: precipitation_probability[i],
+              rain: precipitation[i]
+            });
+          }
+        }
+
+        items.sort((a, b) => a.hour - b.hour);
+
+        const tableHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Temp (°C)</th>
+                <th>Prob. (%)</th>
+                <th>Lluvia (mm)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => {
+                const isNow = item.hour === currentHour;
+                const heavyRain = item.rain > 2;
+                const rowClass = `${isNow ? 'highlight-now' : ''} ${heavyRain ? 'heavy-rain' : ''}`;
+                return `
+                  <tr class="${rowClass.trim()}">
+                    <td>${item.hour}:00</td>
+                    <td>${item.temp}</td>
+                    <td>${item.prob}</td>
+                    <td>${item.rain.toFixed(1)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+
+        document.getElementById('weather-table').innerHTML = tableHTML;
       })
       .catch(err => {
-        document.getElementById("news").innerText = "No se pudieron cargar las noticias.";
+        document.getElementById('weather-table').textContent = 'No se pudo obtener el clima.';
       });
   </script>
 </body>
