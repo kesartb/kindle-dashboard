@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Clima Albacete - Kindle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      margin: 20px;
+      background: #fff;
+      color: #000;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 5px;
+      text-align: right;
+      border-bottom: 1px solid #ccc;
+    }
+
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+
+    tr.highlight-now {
+      background-color: #e0f7fa;
+      font-weight: bold;
+    }
+
+    tr.heavy-rain {
+      background-color: #ffcdd2;
+    }
+
+    tr.highlight-now.heavy-rain {
+      border: 2px solid #b71c1c;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="dashboard-title">Buenos días – [fecha]</h1>
+  <div id="weather-table">Cargando el tiempo…</div>
+
+  <script>
+    const titleElement = document.getElementById('dashboard-title');
+    const now = new Date();
+    const hour = now.getHours();
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+    let greeting = 'Buenos días';
+    if (hour >= 12 && hour < 20) greeting = 'Buenas tardes';
+    else if (hour >= 20 || hour < 6) greeting = 'Buenas noches';
+
+    const dateStr = `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+    titleElement.textContent = `${greeting} – ${dateStr}`;
+
+    // Obtener datos del tiempo
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=38.9943&longitude=-1.8585&hourly=temperature_2m,precipitation_probability,precipitation&timezone=auto')
+      .then(response => {
+        if (!response.ok) throw new Error('Error en la respuesta');
+        return response.json();
+      })
+      .then(data => {
+        const { time, temperature_2m, precipitation_probability, precipitation } = data.hourly;
+        const currentHour = now.getHours();
+        const todayStr = now.toISOString().split('T')[0];
+        const items = [];
+
+        for (let i = 0; i < time.length; i++) {
+          const [dateStr, hourStr] = time[i].split('T');
+          const hour = parseInt(hourStr.split(':')[0], 10);
+          if (dateStr === todayStr && hour >= 8 && hour <= 22) {
+            items.push({
+              hour,
+              temp: temperature_2m[i],
+              prob: precipitation_probability[i],
+              rain: precipitation[i]
+            });
+          }
+        }
+
+        items.sort((a, b) => a.hour - b.hour);
+
+        const tableHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Temp (°C)</th>
+                <th>Prob. (%)</th>
+                <th>Lluvia (mm)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => {
+                const isNow = item.hour === currentHour;
+                const heavyRain = item.rain > 2;
+                const rowClass = `${isNow ? 'highlight-now' : ''} ${heavyRain ? 'heavy-rain' : ''}`;
+                return `
+                  <tr class="${rowClass.trim()}">
+                    <td>${item.hour}:00</td>
+                    <td>${item.temp}</td>
+                    <td>${item.prob}</td>
+                    <td>${item.rain.toFixed(1)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+
+        document.getElementById('weather-table').innerHTML = tableHTML;
+      })
+      .catch(err => {
+        document.getElementById('weather-table').textContent = 'No se pudo obtener el clima.';
+      });
+  </script>
+</body>
+</html>
