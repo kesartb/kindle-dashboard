@@ -1,7 +1,7 @@
-var api_locParams = "lat=50.1243111&lon=14.4901953";
-// or api_locParams = "q=Paris";
-var api_appId = "YOUR_API_KEY";
-var api_lang = "sk"
+//var api_locParams = "lat=50.1243111&lon=14.4901953";
+var api_locParams = "q=Albacete";
+var api_appId = "c1e158999daa2e28cd0032d832c2d870";
+var api_lang = "es"
 var api_units = "metric"; 
 
 var api_params = null;
@@ -11,7 +11,7 @@ var refreshTime = 30 * 60 * 1000;
 
 // Browser in kindle paperwhite doesn't support rotation.
 // You can override with this parameter 'll' and 'lr' for landscape left/right, 'up' for upside down.
-//var rotation = "ll";
+var rotation = "ll";
 
 // You can set night mode,
 // "auto" - by sunrise and sunset,
